@@ -135,6 +135,12 @@ extern int muxserver_sock; /* XXX use mux_client_cleanup() instead */
 extern char *host;
 
 /*
+ * If this field is not NULL, the ForwardAgent socket is this path and different
+ * instead of SSH_AUTH_SOCK.
+ */
+extern char *forward_agent_sock_path;
+
+/*
  * Flag to indicate that we have received a window change signal which has
  * not yet been processed.  This will cause a message indicating the new
  * window size to be sent to the server a little later.  This is volatile
@@ -1618,7 +1624,12 @@ client_request_agent(struct ssh *ssh, const char *request_type, int rchan)
 		    "malicious server.");
 		return NULL;
 	}
-	if ((r = ssh_get_authentication_socket(&sock)) != 0) {
+	if (forward_agent_sock_path == NULL) {
+		r = ssh_get_authentication_socket(&sock);
+	} else {
+		r = ssh_get_authentication_socket_path(forward_agent_sock_path, &sock);
+	}
+	if (r != 0) {
 		if (r != SSH_ERR_AGENT_NOT_PRESENT)
 			debug("%s: ssh_get_authentication_socket: %s",
 			    __func__, ssh_err(r));

@@ -168,6 +168,12 @@ char *config = NULL;
  */
 char *host;
 
+/*
+ * A config can specify a path to forward, overriding SSH_AUTH_SOCK. If this is
+ * not NULL, forward the socket at this path instead.
+ */
+char *forward_agent_sock_path = NULL;
+
 /* Various strings used to to percent_expand() arguments */
 static char thishost[NI_MAXHOST], shorthost[NI_MAXHOST], portstr[NI_MAXSERV];
 static char uidstr[32], *host_arg, *conn_hash_hex;
@@ -1495,6 +1501,32 @@ main(int ac, char **av)
 				setenv(SSH_AUTHSOCKET_ENV_NAME, cp, 1);
 			}
 			free(cp);
+		}
+	}
+
+	if (options.forward_agent && (options.forward_agent_sock_path != NULL)) {
+		p = tilde_expand_filename(options.forward_agent_sock_path, getuid());
+		cp = percent_expand(p,
+		    "d", pw->pw_dir,
+		    "h", host,
+		    "i", uidstr,
+		    "l", thishost,
+		    "r", options.user,
+		    "u", pw->pw_name,
+		    (char *)NULL);
+		free(p);
+
+		if (cp[0] == '$') {
+			if (!valid_env_name(cp + 1)) {
+				fatal("Invalid ForwardAgent environment variable name %s", cp);
+			}
+			if ((p = getenv(cp + 1)) != NULL)
+				forward_agent_sock_path = p;
+			else
+				options.forward_agent = 0;
+			free(cp);
+		} else {
+			forward_agent_sock_path = cp;
 		}
 	}
 

@@ -94,5 +94,15 @@ if [ "$dsa" = "1" ]; then
 	expect_result_absent "$f" "ssh-dss-cert-v01.*"
 fi
 
+verbose "agentforwarding"
+f=`${SSH} -GF none host | awk '/^forwardagent /{print$2}'`
+expect_result_present "$f" "no"
+f=`${SSH} -GF none -oforwardagent=no host | awk '/^forwardagent /{print$2}'`
+expect_result_present "$f" "no"
+f=`${SSH} -GF none -oforwardagent=yes host | awk '/^forwardagent /{print$2}'`
+expect_result_present "$f" "yes"
+f=`${SSH} -GF none '-oforwardagent=SSH_AUTH_SOCK.forward' host | awk '/^forwardagent /{print$2}'`
+expect_result_present "$f" "SSH_AUTH_SOCK.forward"
+
 # cleanup
 rm -f $OBJ/ssh_config.[012]
